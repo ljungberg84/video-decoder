@@ -5,7 +5,6 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.List;
@@ -33,8 +32,8 @@ public class Processor {
             processVideo(path);
             jmsTemplate.convertAndSend("encoder-response", 1 + " " + path);
         } catch (Exception e) {
-            jmsTemplate.convertAndSend("encoder-response", -1 + " " + path);
             e.printStackTrace();
+            jmsTemplate.convertAndSend("encoder-response", -1 + " " + path);
         }
     }
 
@@ -45,24 +44,19 @@ public class Processor {
         List<VideoEncodingSetting> relevantEncodingSettings = pixelHeights.stream().filter(encodingSetting -> encodingSetting.getPixelHeight() <= videoPixelHeight).collect(Collectors.toList());
 
         for (VideoEncodingSetting encodingSetting : relevantEncodingSettings) {
-            Process process = executeCommand(encodingSetting.getEncodingCommand(path));
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-            }
-
-            int exitVal = process.waitFor();
-            if (exitVal == 0) {
-                System.out.println("Successfully encoded in " + encodingSetting.getPixelHeight() + "!");
-            } else {
-                throw new Exception("Failed encoding " + encodingSetting.getPixelHeight() + "! Exit value: " + exitVal);
-            }
+            executeCommand(encodingSetting.getEncodingCommand(path), "Failed encoding " + encodingSetting.getPixelHeight() + "!");
         }
 
         createManifest(relevantEncodingSettings, path);
+    }
+
+    private int getVideoPixelHeight(String path) throws Exception{
+
+        String output = executeCommand("packager input=" + path + " --dump_stream_info", "Could not find video pixel height");
+
+        String pixelHeight = output.substring(output.indexOf("height") + 8, output.indexOf("height") + 12).trim();
+
+        return Integer.parseInt(pixelHeight);
     }
 
     private void createManifest(List<VideoEncodingSetting> encodingSettings, String path) throws Exception {
@@ -78,63 +72,45 @@ public class Processor {
 
         manifestCommand.append("--mpd_output " + path.substring(0, path.length() - 4) + ".mpd");
 
-        System.out.println(manifestCommand.toString());
-
-        Process process = executeCommand(manifestCommand.toString());
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-        String line;
-        while ((line = reader.readLine()) != null) {
-            System.out.println(line);
-        }
-
-        int exitVal = process.waitFor();
-        if (exitVal == 0) {
-            System.out.println("Successfully created manifest!");
-        } else {
-            System.err.println("Failed to create manifest! Exit value: " + exitVal);
-            throw new Exception("Could not create manifest");
-        }
+        executeCommand(manifestCommand.toString(), "Could not create manifest");
     }
 
-    private Process executeCommand(String command) throws IOException {
+    private String executeCommand(String command, String errorMessage) throws Exception {
 
         boolean isWindows = System.getProperty("os.name")
                 .toLowerCase().startsWith("windows");
 
+        Process process;
+
         if (isWindows) {
-            return Runtime.getRuntime()
+            process = Runtime.getRuntime()
                     .exec("cmd /c " + command);
         } else {
-            return Runtime.getRuntime()
+            process = Runtime.getRuntime()
                     .exec("sh -c " + command);
         }
-    }
 
-    private int getVideoPixelHeight(String path) throws Exception{
+        BufferedReader reader;
 
-        Process process = executeCommand("packager input=" + path + " --dump_stream_info");
+        if (command.startsWith("ffmpeg")) {
+            reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        } else {
+            reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        }
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-        int pixelHeight = -1;
+        StringBuilder output = new StringBuilder();
 
         String line;
         while ((line = reader.readLine()) != null) {
             System.out.println(line);
-            if (line.startsWith(" height:"))
-                pixelHeight = Integer.parseInt(line.substring(line.indexOf(":") + 2));
+            output.append(line + " ");
         }
 
         int exitVal = process.waitFor();
-        if (exitVal == 0 && pixelHeight != -1) {
-            System.out.println("Successfully found video pixel height!");
-            return pixelHeight;
+        if (exitVal == 0 ) {
+            return output.toString();
         } else {
-            System.err.println("Failed to find video pixel height! Exit value: " + exitVal);
+            throw new Exception(errorMessage);
         }
-
-        throw new Exception("Could not find video pixel height");
     }
 }
