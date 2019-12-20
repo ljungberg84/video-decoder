@@ -7,11 +7,19 @@ import org.springframework.stereotype.Component;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
 public class Processor {
+
+    private static final String UPLOADER_TO_ENCODER_QUE = "uploader-to-encoder-que";
+    private static final String ENCODER_TO_DATA_QUE = "encoder-to-data-que";
+
+    private static final String ROOT_LOCATION = "C:\\Users\\Carl\\Documents\\ITHS\\ITHS-kurser\\complex-java\\group-project\\videouploader\\videos\\";
+
 
     private final List<VideoEncodingSetting> pixelHeights = Arrays.asList(
             new VideoEncodingSetting(1080, 6000),
@@ -26,14 +34,17 @@ public class Processor {
         this.jmsTemplate = jmsTemplate;
     }
 
-    @JmsListener(destination = "video-file")
-    public void start(String path) {
+    @JmsListener(destination = UPLOADER_TO_ENCODER_QUE)
+    public void start(Map<String, String> message){
+
+        long userId = Long.parseLong(message.get("userId"));
+        String title = message.get("title");
+        String fileName = userId + "&" + title;
         try {
-            processVideo(path);
-            jmsTemplate.convertAndSend("encoder-response", 1 + " " + path);
+            processVideo(ROOT_LOCATION + fileName);
+            sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
         } catch (Exception e) {
             e.printStackTrace();
-            jmsTemplate.convertAndSend("encoder-response", -1 + " " + path);
         }
     }
 
@@ -113,4 +124,18 @@ public class Processor {
             throw new Exception(errorMessage);
         }
     }
+
+    private void sendJMS(String destination, int status, long userId, String title){
+        Map<String, String> message = new HashMap<>();
+        message.put("status", String.valueOf(status));
+        message.put("userId", String.valueOf(userId));
+        message.put("title", title);
+
+        jmsTemplate.convertAndSend(destination, message);
+    }
+
+    public String createFilename(long userId, String title){
+        return userId + "&" + title;
+    }
+
 }
