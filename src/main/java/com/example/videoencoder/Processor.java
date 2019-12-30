@@ -1,5 +1,7 @@
 package com.example.videoencoder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -20,6 +22,7 @@ public class Processor {
 
     private static final String ROOT_LOCATION = "C:\\Users\\Carl\\Documents\\ITHS\\ITHS-kurser\\complex-java\\group-project\\videouploader\\videos\\";
 
+    private Logger logger = LoggerFactory.getLogger(Processor.class);
 
     private final List<VideoEncodingSetting> pixelHeights = Arrays.asList(
             new VideoEncodingSetting(1080, 6000),
@@ -41,6 +44,7 @@ public class Processor {
         String title = message.get("title");
         String fileName = userId + "&" + title;
         try {
+            logger.info("processing video: {}", fileName);
             processVideo(ROOT_LOCATION + fileName);
             sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
         } catch (Exception e) {
