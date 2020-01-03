@@ -2,6 +2,7 @@ package com.example.videoencoder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,9 @@ public class Processor {
     private static final String UPLOADER_TO_ENCODER_QUE = "uploader-to-encoder-que";
     private static final String ENCODER_TO_DATA_QUE = "encoder-to-data-que";
 
-    private static final String ROOT_LOCATION = "C:\\Users\\Carl\\Documents\\ITHS\\ITHS-kurser\\complex-java\\group-project\\videouploader\\videos\\";
+    //private static final String ROOT_LOCATION = "C:\\Users\\Carl\\Documents\\ITHS\\ITHS-kurser\\complex-java\\group-project\\videouploader\\videos\\";
+    @Value("${file_location}")
+    private String ROOT_LOCATION;
 
     private Logger logger = LoggerFactory.getLogger(Processor.class);
 
@@ -67,7 +70,7 @@ public class Processor {
 
     private int getVideoPixelHeight(String path) throws Exception{
 
-        String output = executeCommand("packager input=" + path + " --dump_stream_info", "Could not find video pixel height");
+        String output = executeCommand("packager input=" + "'" + path +"'" + " --dump_stream_info", "Could not find video pixel height");
 
         String pixelHeight = output.substring(output.indexOf("height") + 8, output.indexOf("height") + 12).trim();
 

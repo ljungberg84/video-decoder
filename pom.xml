@@ -13,11 +13,9 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>video-encoder</name>
     <description>Demo project for Spring Boot</description>
-
     <properties>
         <java.version>1.8</java.version>
     </properties>
-
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -36,7 +34,6 @@
             </exclusions>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
             <plugin>
@@ -47,14 +44,55 @@
                 <groupId>io.fabric8</groupId>
                 <artifactId>fabric8-maven-plugin</artifactId>
                 <version>4.3.1</version>
-            </plugin>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <images>
+                        <image>
+<!--                            <name>${project.name}</name>-->
+                            <name>encoder-test-2</name>
+                            <build>
+                                <from>fabric8/java-centos-openjdk8-jdk:1.5</from>
+                                <assembly>
+                                    <targetDir>/deployments</targetDir>
+                                    <descriptorRef>artifact</descriptorRef>
+                                    <user>jboss:root:root</user>
+                                </assembly>
+                                <labels>
+                                    <org.label-schema.description>Demo project for Spring Boot" org.label-schema.version=0.0.1-SNAPSHOT org.label-schema.schema-version=1.0 org.label-schema.build-date=2020-01-02T14:09:27.650440 org.label-schema.name=video-encoder org.label-schema.vcs-ref=f8a3e7b1f13799a01c43c33d430e1df67002329e org.label-schema.url=https://projects.spring.io/spring-boot/#/spring-boot-starter-parent/video-encoder org.label-schema.vcs-url=https://github.com/ljungberg84/video-encoder.git</org.label-schema.description>
+                                </labels>
+                                <env>
+                                    <JAVA_APP_DIR>/deployments</JAVA_APP_DIR>
+                                </env>
+                                <runCmds>
+<!--                                    <runCmd>yum -y update \ yum -y install git \ yum -y install epel-release</runCmd>-->
+<!--                                    <runCmd>rpm -v &#45;&#45;import http://li.nux.ro/download/nux/RPM-GPG-KEY-nux.ro</runCmd>-->
+<!--                                    <runCmd>rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm</runCmd>-->
+<!--                                    <runCmd>yum -y install ffmpeg ffmpeg-devel</runCmd>-->
+<!--                                    <runCmd>yum -y install git</runCmd>-->
+<!--                                    <runCmd>yum -y install epel-release</runCmd>-->
+<!--                                    <runCmd>rpm -v &#45;&#45;import http://li.nux.ro/download/nux/RPM-GPG-KEY-nux.ro</runCmd>-->
+<!--                                    <runCmd>rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm</runCmd>-->
+<!--                                    <runCmd>yum -y install ffmpeg ffmpeg-devel</runCmd>-->
+                                </runCmds>
+                                <ports>
+                                    <port>8083</port>
+                                    <port>8778</port>
+                                    <port>9779</port>
+                                </ports>
+                                <tags>
+                                    <tag>latest</tag>
+                                </tags>
+                            </build>
+                        </image>
+                    </images>
                 </configuration>
             </plugin>
+<!--            <plugin>-->
+<!--                <artifactId>maven-compiler-plugin</artifactId>-->
+<!--                <configuration>-->
+<!--                    <source>1.8</source>-->
+<!--                    <target>1.8</target>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
         </plugins>
     </build>
 
