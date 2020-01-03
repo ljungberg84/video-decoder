@@ -48,7 +48,7 @@ public class Processor {
         String fileName = userId + "&" + title;
         try {
             logger.info("processing video: {}", fileName);
-            processVideo(ROOT_LOCATION + fileName);
+            processVideo(ROOT_LOCATION + "/" + fileName);
             sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
         } catch (Exception e) {
             e.printStackTrace();
