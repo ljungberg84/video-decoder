@@ -48,6 +48,7 @@ public class Processor {
         String fileName = userId + "&" + title;
         try {
             logger.info("processing video: {}", fileName);
+            logger.info("root location + filename: " + ROOT_LOCATION + "/" + fileName);
             processVideo(ROOT_LOCATION + "/" + fileName);
             sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
         } catch (Exception e) {
@@ -95,6 +96,8 @@ public class Processor {
 
     private String executeCommand(String command, String errorMessage) throws Exception {
 
+        logger.info("executeCommand(), command: " + command);
+
         boolean isWindows = System.getProperty("os.name")
                 .toLowerCase().startsWith("windows");
 
@@ -105,7 +108,8 @@ public class Processor {
                     .exec("cmd /c " + command);
         } else {
             process = Runtime.getRuntime()
-                    .exec("sh -c " + command);
+                    //.exec("sh -c " + command);
+                    .exec( command);
         }
 
         BufferedReader reader;
