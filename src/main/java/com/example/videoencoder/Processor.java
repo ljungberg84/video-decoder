@@ -21,7 +21,6 @@ public class Processor {
     private static final String UPLOADER_TO_ENCODER_QUE = "uploader-to-encoder-que";
     private static final String ENCODER_TO_DATA_QUE = "encoder-to-data-que";
 
-    //private static final String ROOT_LOCATION = "C:\\Users\\Carl\\Documents\\ITHS\\ITHS-kurser\\complex-java\\group-project\\videouploader\\videos\\";
     @Value("${file_location}")
     private String ROOT_LOCATION;
 
@@ -47,11 +46,11 @@ public class Processor {
         String title = message.get("title");
         String fileName = userId + "&" + title;
         try {
-            logger.info("processing video: {}", fileName);
-            logger.info("root location + filename: " + ROOT_LOCATION + "/" + fileName);
+            logger.info("encoding video: {}", fileName);
             processVideo(ROOT_LOCATION + "/" + fileName);
             sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
         } catch (Exception e) {
+            logger.info("error: {}", e.getMessage());
             e.printStackTrace();
         }
     }
@@ -61,18 +60,16 @@ public class Processor {
         final int videoPixelHeight = getVideoPixelHeight(path);
 
         List<VideoEncodingSetting> relevantEncodingSettings = pixelHeights.stream().filter(encodingSetting -> encodingSetting.getPixelHeight() <= videoPixelHeight).collect(Collectors.toList());
-
         for (VideoEncodingSetting encodingSetting : relevantEncodingSettings) {
+
             executeCommand(encodingSetting.getEncodingCommand(path), "Failed encoding " + encodingSetting.getPixelHeight() + "!");
         }
-
         createManifest(relevantEncodingSettings, path);
     }
 
     private int getVideoPixelHeight(String path) throws Exception{
 
-        String output = executeCommand("packager input=" + "'" + path +"'" + " --dump_stream_info", "Could not find video pixel height");
-
+        String output = executeCommand("packager input=" + path + " --dump_stream_info", "Could not find video pixel height");
         String pixelHeight = output.substring(output.indexOf("height") + 8, output.indexOf("height") + 12).trim();
 
         return Integer.parseInt(pixelHeight);
@@ -96,20 +93,20 @@ public class Processor {
 
     private String executeCommand(String command, String errorMessage) throws Exception {
 
-        logger.info("executeCommand(), command: " + command);
-
         boolean isWindows = System.getProperty("os.name")
                 .toLowerCase().startsWith("windows");
 
         Process process;
 
         if (isWindows) {
+            logger.info("executing windows command: {}", command);
             process = Runtime.getRuntime()
                     .exec("cmd /c " + command);
         } else {
+            logger.info("executing linux command: {}", command);
             process = Runtime.getRuntime()
                     //.exec("sh -c " + command);
-                    .exec( command);
+                    .exec(command);
         }
 
         BufferedReader reader;
@@ -124,19 +121,28 @@ public class Processor {
 
         String line;
         while ((line = reader.readLine()) != null) {
-            System.out.println(line);
+            //System.out.println(line);
             output.append(line + " ");
         }
 
         int exitVal = process.waitFor();
         if (exitVal == 0 ) {
+
             return output.toString();
         } else {
+            int len;
+            if ((len = process.getErrorStream().available()) > 0) {
+                byte[] buf = new byte[len];
+                process.getErrorStream().read(buf);
+                logger.info("Command error:\t\"" + new String(buf) + "\"");
+            }
+
             throw new Exception(errorMessage);
         }
     }
 
     private void sendJMS(String destination, int status, long userId, String title){
+        logger.info("sending message to broker: {}, status: {}, fileName: {}", destination, status, userId + title);
         Map<String, String> message = new HashMap<>();
         message.put("status", String.valueOf(status));
         message.put("userId", String.valueOf(userId));
@@ -148,5 +154,4 @@ public class Processor {
     public String createFilename(long userId, String title){
         return userId + "&" + title;
     }
-
 }

@@ -47,7 +47,8 @@
                 <configuration>
                     <images>
                         <image>
-                            <name>${project.name}</name>
+                            <name>test-encoder-image</name>
+<!--                            <name>${project.name}</name>-->
                             <build>
                                 <dockerFile>${project.basedir}/Dockerfile</dockerFile>
                                 <tags>
