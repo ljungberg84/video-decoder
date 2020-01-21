@@ -49,6 +49,7 @@ public class Processor {
             logger.info("encoding video: {}", fileName);
             processVideo(ROOT_LOCATION + "/" + fileName);
             sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
+            logger.info("encoding for video: {} completed successfully", fileName);
         } catch (Exception e) {
             logger.info("error: {}", e.getMessage());
             e.printStackTrace();

@@ -5,8 +5,6 @@ LABEL org.label-schema.description="Demo project for Spring Boot" org.label-sche
 EXPOSE 8083 8778 9779
 USER root
 
-
-
 RUN yum -y update
 
 #ffmpeg
@@ -23,7 +21,10 @@ RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 ENV PATH="$PATH:/depot_tools"
 RUN mkdir shaka_packager
 RUN cd shaka_packager && gclient config https://www.github.com/google/shaka-packager.git --name=src --unmanaged
-RUN cd shaka_packager && gclient sync
+#RUN cd shaka_packager && gclient sync
+#test if this minimizes size --no-history
+#RUN cd shaka_packager && gclient sync --no-
+RUN cd shaka_packager && gclient sync -r v2.4.1 --no-history
 RUN cd shaka_packager/src && ninja -C out/Release
 ENV PATH="$PATH:/shaka_packager/src/out/Release"
 
