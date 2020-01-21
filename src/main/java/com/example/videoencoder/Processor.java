@@ -18,7 +18,7 @@ public class Processor {
     private static final String UPLOADER_TO_ENCODER_QUE = "uploader-to-encoder-que";
     private static final String ENCODER_TO_DATA_QUE = "encoder-to-data-que";
 
-    private static final String ROOT_LOCATION = "C:\\Users\\Carl\\Documents\\ITHS\\ITHS-kurser\\complex-java\\group-project\\videouploader\\videos\\";
+    private static final String ROOT_LOCATION = "C:\\Users\\anton\\Documents\\Projects\\video-uploader\\videos\\";
 
 
     private final List<VideoEncodingSetting> pixelHeights = Arrays.asList(
@@ -38,11 +38,10 @@ public class Processor {
     public void start(Map<String, String> message){
 
         long userId = Long.parseLong(message.get("userId"));
-        String title = message.get("title");
-        String fileName = userId + "&" + title;
+        long videoId = Long.parseLong(message.get("videoId"));
         try {
-            processVideo(ROOT_LOCATION + fileName);
-            sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
+            processVideo(ROOT_LOCATION + userId + "\\" + videoId + "\\" + videoId + ".mp4");
+            sendJMS(ENCODER_TO_DATA_QUE, 1, userId, videoId);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -61,7 +60,9 @@ public class Processor {
         createManifest(relevantEncodingSettings, path);
     }
 
-    private int getVideoPixelHeight(String path) throws Exception{
+    private int getVideoPixelHeight(String path) throws Exception {
+
+        System.out.println(path);
 
         String output = executeCommand("packager input=" + path + " --dump_stream_info", "Could not find video pixel height");
 
@@ -125,17 +126,12 @@ public class Processor {
         }
     }
 
-    private void sendJMS(String destination, int status, long userId, String title){
+    private void sendJMS(String destination, int status, long userId, long videoId){
         Map<String, String> message = new HashMap<>();
         message.put("status", String.valueOf(status));
         message.put("userId", String.valueOf(userId));
-        message.put("title", title);
+        message.put("videoId", String.valueOf(videoId));
 
         jmsTemplate.convertAndSend(destination, message);
     }
-
-    public String createFilename(long userId, String title){
-        return userId + "&" + title;
-    }
-
 }
