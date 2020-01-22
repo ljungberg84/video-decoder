@@ -1,5 +1,8 @@
 package com.example.videoencoder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -18,8 +21,10 @@ public class Processor {
     private static final String UPLOADER_TO_ENCODER_QUE = "uploader-to-encoder-que";
     private static final String ENCODER_TO_DATA_QUE = "encoder-to-data-que";
 
-    private static final String ROOT_LOCATION = "C:\\Users\\Carl\\Documents\\ITHS\\ITHS-kurser\\complex-java\\group-project\\videouploader\\videos\\";
+    @Value("${file_location}")
+    private String ROOT_LOCATION;
 
+    private Logger logger = LoggerFactory.getLogger(Processor.class);
 
     private final List<VideoEncodingSetting> pixelHeights = Arrays.asList(
             new VideoEncodingSetting(1080, 6000),
@@ -41,9 +46,11 @@ public class Processor {
         String title = message.get("title");
         String fileName = userId + "&" + title;
         try {
-            processVideo(ROOT_LOCATION + fileName);
+            logger.info("encoding video: {}", fileName);
+            processVideo(ROOT_LOCATION + "/" + fileName);
             sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
         } catch (Exception e) {
+            logger.info("error: {}", e.getMessage());
             e.printStackTrace();
         }
     }
@@ -53,18 +60,16 @@ public class Processor {
         final int videoPixelHeight = getVideoPixelHeight(path);
 
         List<VideoEncodingSetting> relevantEncodingSettings = pixelHeights.stream().filter(encodingSetting -> encodingSetting.getPixelHeight() <= videoPixelHeight).collect(Collectors.toList());
-
         for (VideoEncodingSetting encodingSetting : relevantEncodingSettings) {
+
             executeCommand(encodingSetting.getEncodingCommand(path), "Failed encoding " + encodingSetting.getPixelHeight() + "!");
         }
-
         createManifest(relevantEncodingSettings, path);
     }
 
     private int getVideoPixelHeight(String path) throws Exception{
 
         String output = executeCommand("packager input=" + path + " --dump_stream_info", "Could not find video pixel height");
-
         String pixelHeight = output.substring(output.indexOf("height") + 8, output.indexOf("height") + 12).trim();
 
         return Integer.parseInt(pixelHeight);
@@ -94,11 +99,14 @@ public class Processor {
         Process process;
 
         if (isWindows) {
+            logger.info("executing windows command: {}", command);
             process = Runtime.getRuntime()
                     .exec("cmd /c " + command);
         } else {
+            logger.info("executing linux command: {}", command);
             process = Runtime.getRuntime()
-                    .exec("sh -c " + command);
+                    //.exec("sh -c " + command);
+                    .exec(command);
         }
 
         BufferedReader reader;
@@ -113,19 +121,28 @@ public class Processor {
 
         String line;
         while ((line = reader.readLine()) != null) {
-            System.out.println(line);
+            //System.out.println(line);
             output.append(line + " ");
         }
 
         int exitVal = process.waitFor();
         if (exitVal == 0 ) {
+
             return output.toString();
         } else {
+            int len;
+            if ((len = process.getErrorStream().available()) > 0) {
+                byte[] buf = new byte[len];
+                process.getErrorStream().read(buf);
+                logger.info("Command error:\t\"" + new String(buf) + "\"");
+            }
+
             throw new Exception(errorMessage);
         }
     }
 
     private void sendJMS(String destination, int status, long userId, String title){
+        logger.info("sending message to broker: {}, status: {}, fileName: {}", destination, status, userId + title);
         Map<String, String> message = new HashMap<>();
         message.put("status", String.valueOf(status));
         message.put("userId", String.valueOf(userId));
@@ -137,5 +154,4 @@ public class Processor {
     public String createFilename(long userId, String title){
         return userId + "&" + title;
     }
-
 }
