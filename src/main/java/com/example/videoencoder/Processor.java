@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -18,9 +20,6 @@ public class Processor {
     private static final String UPLOADER_TO_ENCODER_QUE = "uploader-to-encoder-que";
     private static final String ENCODER_TO_DATA_QUE = "encoder-to-data-que";
 
-    private static final String ROOT_LOCATION = "C:\\Users\\anton\\Documents\\Projects\\video-uploader\\videos\\";
-
-
     private final List<VideoEncodingSetting> pixelHeights = Arrays.asList(
             new VideoEncodingSetting(1080, 6000),
             new VideoEncodingSetting(720, 3000),
@@ -28,10 +27,13 @@ public class Processor {
             new VideoEncodingSetting(360, 600)
     );
 
+    private final Path rootLocation;
+
     private JmsTemplate jmsTemplate;
 
-    public Processor(JmsTemplate jmsTemplate) {
+    public Processor(JmsTemplate jmsTemplate, StorageProperties properties) {
         this.jmsTemplate = jmsTemplate;
+        this.rootLocation = Paths.get(properties.getLocation());
     }
 
     @JmsListener(destination = UPLOADER_TO_ENCODER_QUE)
@@ -40,7 +42,7 @@ public class Processor {
         long userId = Long.parseLong(message.get("userId"));
         long videoId = Long.parseLong(message.get("videoId"));
         try {
-            processVideo(ROOT_LOCATION + userId + "\\" + videoId + "\\" + videoId + ".mp4");
+            processVideo(rootLocation.toString() + "\\" + userId + "\\" + videoId + "\\" + videoId + ".mp4");
             sendJMS(ENCODER_TO_DATA_QUE, 1, userId, videoId);
         } catch (Exception e) {
             e.printStackTrace();
