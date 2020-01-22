@@ -70,8 +70,6 @@ public class Processor {
 
     private int getVideoPixelHeight(String path) throws Exception {
 
-        System.out.println(path);
-
         String output = executeCommand("packager input=" + path + " --dump_stream_info", "Could not find video pixel height");
         String pixelHeight = output.substring(output.indexOf("height") + 8, output.indexOf("height") + 12).trim();
 
@@ -145,7 +143,8 @@ public class Processor {
     }
 
     private void sendJMS(String destination, int status, long userId, long videoId){
-        logger.info("sending message to broker: {}, status: {}, videoId: {}", destination, status, videoId);
+        logger.info("sending message to broker: {}, status: {}, videoId: {}", destination, status, videoId)
+
         Map<String, String> message = new HashMap<>();
         message.put("status", String.valueOf(status));
         message.put("userId", String.valueOf(userId));
