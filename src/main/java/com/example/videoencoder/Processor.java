@@ -2,13 +2,14 @@ package com.example.videoencoder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -21,9 +22,6 @@ public class Processor {
     private static final String UPLOADER_TO_ENCODER_QUE = "uploader-to-encoder-que";
     private static final String ENCODER_TO_DATA_QUE = "encoder-to-data-que";
 
-    @Value("${file_location}")
-    private String ROOT_LOCATION;
-
     private Logger logger = LoggerFactory.getLogger(Processor.class);
 
     private final List<VideoEncodingSetting> pixelHeights = Arrays.asList(
@@ -33,23 +31,24 @@ public class Processor {
             new VideoEncodingSetting(360, 600)
     );
 
+    private final Path rootLocation;
+
     private JmsTemplate jmsTemplate;
 
-    public Processor(JmsTemplate jmsTemplate) {
+    public Processor(JmsTemplate jmsTemplate, StorageProperties properties) {
         this.jmsTemplate = jmsTemplate;
+        this.rootLocation = Paths.get(properties.getLocation());
     }
 
     @JmsListener(destination = UPLOADER_TO_ENCODER_QUE)
     public void start(Map<String, String> message){
 
         long userId = Long.parseLong(message.get("userId"));
-        String title = message.get("title");
-        String fileName = userId + "&" + title;
+        long videoId = Long.parseLong(message.get("videoId"));
         try {
-            logger.info("encoding video: {}", fileName);
-            processVideo(ROOT_LOCATION + "/" + fileName);
-            sendJMS(ENCODER_TO_DATA_QUE, 1, userId, title);
-            logger.info("encoding for video: {} completed successfully", fileName);
+            processVideo(rootLocation.toString() + "\\" + userId + "\\" + videoId + "\\" + videoId + ".mp4");
+            sendJMS(ENCODER_TO_DATA_QUE, 1, userId, videoId);
+            logger.info("encoding video: {}", videoId);
         } catch (Exception e) {
             logger.info("error: {}", e.getMessage());
             e.printStackTrace();
@@ -68,7 +67,7 @@ public class Processor {
         createManifest(relevantEncodingSettings, path);
     }
 
-    private int getVideoPixelHeight(String path) throws Exception{
+    private int getVideoPixelHeight(String path) throws Exception {
 
         String output = executeCommand("packager input=" + path + " --dump_stream_info", "Could not find video pixel height");
         String pixelHeight = output.substring(output.indexOf("height") + 8, output.indexOf("height") + 12).trim();
@@ -142,17 +141,14 @@ public class Processor {
         }
     }
 
-    private void sendJMS(String destination, int status, long userId, String title){
-        logger.info("sending message to broker: {}, status: {}, fileName: {}", destination, status, userId + title);
+    private void sendJMS(String destination, int status, long userId, long videoId){
+        logger.info("sending message to broker: {}, status: {}, videoId: {}", destination, status, videoId);
+
         Map<String, String> message = new HashMap<>();
         message.put("status", String.valueOf(status));
         message.put("userId", String.valueOf(userId));
-        message.put("title", title);
+        message.put("videoId", String.valueOf(videoId));
 
         jmsTemplate.convertAndSend(destination, message);
-    }
-
-    public String createFilename(long userId, String title){
-        return userId + "&" + title;
     }
 }
