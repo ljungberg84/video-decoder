@@ -143,7 +143,7 @@ public class Processor {
     }
 
     private void sendJMS(String destination, int status, long userId, long videoId){
-        logger.info("sending message to broker: {}, status: {}, videoId: {}", destination, status, videoId)
+        logger.info("sending message to broker: {}, status: {}, videoId: {}", destination, status, videoId);
 
         Map<String, String> message = new HashMap<>();
         message.put("status", String.valueOf(status));
