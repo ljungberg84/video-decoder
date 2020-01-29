@@ -1,6 +1,6 @@
 spring:
   application:
-    name: video-data
+    name: encoder
 
 #server:
 #  port: 7001
@@ -11,7 +11,9 @@ eureka:
     registerWithEureka: true
     fetchRegistry: true
     serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+      #EUREKA_URL=//<container-name>:<port>
+      defaultZone: http:${EUREKA_URL://13.48.248.158:5555/}/eureka/
+      #defaultZone: http://localhost:8761/eureka/
 #      defaultZone: http://13.48.248.158:5555/eureka/
   instance:
     hostname: localhost

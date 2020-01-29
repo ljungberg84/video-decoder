@@ -29,5 +29,6 @@ RUN cd shaka_packager/src && ninja -C out/Release
 ENV PATH="$PATH:/shaka_packager/src/out/Release"
 
 #check if this works for only copying jar
+RUN echo hello
 COPY set_paths.sh /etc/profile.d/
 COPY ./target/*.jar /deployments/
